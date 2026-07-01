@@ -1,0 +1,299 @@
+// PromptPilot — V1 data model
+// ─────────────────────────────────────────────────────────────────────────
+// Two load-bearing principles (the "scales for years without a redesign" bet):
+//   1. EVERYTHING is scoped to a Workspace — even a solo user (a personal
+//      workspace of one). Teams / sharing / marketplace become ADDITIVE later,
+//      never a rewrite.
+//   2. Prompts are IMMUTABLE-VERSIONED from day one (Prompt + PromptVersion).
+//      Editing a prompt creates a new version; the Prompt just points at the
+//      live one. Unlocks version history, the optimizer, A/B testing, and the
+//      evaluator later — all hidden in the V1 UI, but already true in the data.
+// Conventions: models PascalCase singular; tables snake_case plural (@@map);
+//   columns snake_case (@map where needed); enums UPPER_SNAKE; ids cuid();
+//   soft-delete via archivedAt rather than hard deletes; every domain row
+//   carries workspaceId and is filtered by it in the data-access layer.
+// ─────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Identity (Auth.js) ───────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships    Membership[]
+  createdPrompts Prompt[]        @relation("PromptAuthor")
+  versions       PromptVersion[]
+  runs           Run[]
+  favorites      Favorite[]
+  accounts       Account[]
+  sessions       Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─────────────────────────── Tenancy ───────────────────────────
+
+enum WorkspaceType {
+  PERSONAL
+  TEAM
+}
+
+enum PlanTier {
+  FREE
+  PRO
+  TEAM
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Workspace {
+  id        String        @id @default(cuid())
+  name      String
+  slug      String        @unique
+  type      WorkspaceType @default(PERSONAL)
+  plan      PlanTier      @default(FREE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  members     Membership[]
+  prompts     Prompt[]
+  collections Collection[]
+  tags        Tag[]
+  runs        Run[]
+  usage       UsageCounter[]
+
+  @@map("workspaces")
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        Role     @default(OWNER)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+// ─────────────────────────── Prompts (the core object) ───────────────────────────
+
+enum PromptStatus {
+  DRAFT // created by the Create flow, not yet saved to the library
+  ACTIVE
+  ARCHIVED
+}
+
+model Prompt {
+  id               String       @id @default(cuid())
+  workspaceId      String
+  collectionId     String?
+  title            String
+  slug             String
+  status           PromptStatus @default(DRAFT)
+  currentVersionId String?      @unique // pointer to the live version
+  createdById      String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  archivedAt       DateTime?
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  collection     Collection?     @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  createdBy      User            @relation("PromptAuthor", fields: [createdById], references: [id])
+  currentVersion PromptVersion?  @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  versions       PromptVersion[] @relation("PromptVersions")
+  runs           Run[]
+  favorites      Favorite[]
+  tags           PromptTag[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId, status, updatedAt])
+  @@map("prompts")
+}
+
+model PromptVersion {
+  id            String   @id @default(cuid())
+  promptId      String
+  versionNumber Int
+  template      String // the prompt text, with {variable} tokens inline
+  variables     Json // [{ key, label, type: "text"|"longtext"|"select", options?, placeholder?, required }]
+  modelConfig   Json? // { model, temperature?, maxTokens? } — per-version model settings
+  note          String? // optional changelog note ("tightened the CTA")
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  prompt    Prompt  @relation("PromptVersions", fields: [promptId], references: [id], onDelete: Cascade)
+  currentOf Prompt? @relation("CurrentVersion")
+  createdBy User    @relation(fields: [createdById], references: [id])
+  runs      Run[]
+
+  @@unique([promptId, versionNumber])
+  @@index([promptId])
+  @@map("prompt_versions")
+}
+
+// ─────────────────────────── Organization ───────────────────────────
+
+model Collection {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  slug        String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  prompts   Prompt[]
+
+  @@unique([workspaceId, slug])
+  @@map("collections")
+}
+
+model Tag {
+  id          String  @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String?
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  prompts   PromptTag[]
+
+  @@unique([workspaceId, name])
+  @@map("tags")
+}
+
+model PromptTag {
+  promptId String
+  tagId    String
+
+  prompt Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([promptId, tagId])
+  @@map("prompt_tags")
+}
+
+// Per-USER star (not a boolean on Prompt) so favorites stay personal once
+// workspaces hold more than one member.
+model Favorite {
+  userId    String
+  promptId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@id([userId, promptId])
+  @@map("favorites")
+}
+
+// ─────────────────────────── Execution & metering ───────────────────────────
+
+enum RunStatus {
+  PENDING
+  SUCCESS
+  ERROR
+}
+
+// One execution of a version against the model. This single table is the
+// foundation for "Run 12×" counts, prompt analytics, model comparison, and
+// the AI evaluator. promptId is nullable so the first ad-hoc generation (before
+// the user saves) is still recorded and metered.
+model Run {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  promptId        String?
+  promptVersionId String?
+  userId          String
+  inputs          Json // filled variable values: { product: "Acme Blender", audience: "Busy parents" }
+  output          String?
+  model           String
+  status          RunStatus @default(PENDING)
+  tokensIn        Int?
+  tokensOut       Int?
+  costCents       Int?
+  createdAt       DateTime  @default(now())
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  prompt        Prompt?        @relation(fields: [promptId], references: [id], onDelete: SetNull)
+  promptVersion PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
+  user          User           @relation(fields: [userId], references: [id])
+
+  @@index([workspaceId, createdAt])
+  @@index([promptId])
+  @@map("runs")
+}
+
+// O(1) freemium limit check. Incremented in the same transaction as each Run
+// so we never COUNT the runs table on the hot path. period = "YYYY-MM".
+model UsageCounter {
+  id          String @id @default(cuid())
+  workspaceId String
+  period      String
+  generations Int    @default(0)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, period])
+  @@map("usage_counters")
+}
