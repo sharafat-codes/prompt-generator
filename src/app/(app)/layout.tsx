@@ -1,15 +1,14 @@
 import { Sidebar } from "@/components/layout/sidebar";
-import { getSessionSafe } from "@/server/context";
+import { requireSession } from "@/server/context";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSessionSafe();
-  const user = session?.user
-    ? {
-        name: session.user.name ?? session.user.email ?? "You",
-        email: session.user.email,
-        plan: "Free plan",
-      }
-    : undefined;
+  // Gate the whole authenticated app: no session → redirect to /login.
+  const session = await requireSession();
+  const user = {
+    name: session.user.name ?? session.user.email ?? "You",
+    email: session.user.email,
+    plan: "Free plan",
+  };
 
   return (
     <div className="flex min-h-full">
