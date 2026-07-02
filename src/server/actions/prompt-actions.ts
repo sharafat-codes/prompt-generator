@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession, getCurrentWorkspaceId } from "@/server/context";
 import { createPrompt } from "@/server/data/prompts";
 import { prisma } from "@/lib/db";
+import { savedRecipeCap } from "@/lib/plans";
 
 const variableSpec = z.object({
   key: z.string().min(1),
@@ -21,11 +22,24 @@ const saveSchema = z.object({
 });
 
 /** Save a generated recipe to the library. Returns the new prompt's slug. */
-export async function savePrompt(input: z.infer<typeof saveSchema>) {
+export async function savePrompt(
+  input: z.infer<typeof saveSchema>,
+): Promise<{ slug: string } | { error: "recipe_limit"; cap: number }> {
   const parsed = saveSchema.parse(input);
   const session = await requireSession();
   const workspaceId = await getCurrentWorkspaceId();
   if (!workspaceId) throw new Error("No active workspace.");
+
+  // Freemium: the Free plan caps saved recipes.
+  const ws = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { plan: true },
+  });
+  const cap = savedRecipeCap(ws?.plan ?? "FREE");
+  if (cap !== null) {
+    const count = await prisma.prompt.count({ where: { workspaceId, status: "ACTIVE" } });
+    if (count >= cap) return { error: "recipe_limit", cap };
+  }
 
   const slug = await createPrompt({
     workspaceId,

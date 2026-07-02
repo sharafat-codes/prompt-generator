@@ -93,7 +93,7 @@ export function CreateWorkspace({ live }: { live: boolean }) {
     const firstText = type.questions.find((q) => q.type === "text");
     const suffix = firstText ? answers[firstText.key]?.trim() : "";
     try {
-      const { slug } = await savePrompt({
+      const result = await savePrompt({
         title: suffix ? `${type.label} — ${suffix}` : type.label,
         template: type.template,
         variables: type.questions.map((q) => ({
@@ -104,7 +104,14 @@ export function CreateWorkspace({ live }: { live: boolean }) {
           placeholder: q.placeholder,
         })),
       });
-      router.push(`/p/${slug}`);
+      if ("error" in result) {
+        setSaving(false);
+        setToast(
+          `You've hit the Free plan's limit of ${result.cap} saved recipes. Upgrade to save unlimited.`,
+        );
+        return;
+      }
+      router.push(`/p/${result.slug}`);
     } catch {
       setSaving(false);
       setToast("Couldn't save just now — please try again.");

@@ -3,7 +3,8 @@ import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { streamGeneration } from "@/lib/ai/generate";
-import { DEFAULT_MODEL, hasApiKey } from "@/lib/ai/provider";
+import { hasApiKey } from "@/lib/ai/provider";
+import { modelForPlan } from "@/lib/plans";
 import { getUsageStatus } from "@/server/data/workspace";
 import { recordRun } from "@/server/data/runs";
 
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
     else promptId = null;
   }
 
-  const model = hasApiKey() ? DEFAULT_MODEL : "demo";
+  const model = hasApiKey() ? modelForPlan(usage.plan) : "demo";
   const inputs = (parsed.data.inputs ?? {}) as Prisma.InputJsonValue;
   const encoder = new TextEncoder();
 
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
       try {
         for await (const chunk of streamGeneration(parsed.data.prompt, {
           contentType: parsed.data.contentType,
+          model,
         })) {
           output += chunk;
           controller.enqueue(encoder.encode(chunk));

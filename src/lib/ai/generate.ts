@@ -9,7 +9,7 @@ const SYSTEM = `You are PromptPilot's generation engine — an expert copywriter
  */
 export async function* streamGeneration(
   prompt: string,
-  opts: { contentType?: string } = {},
+  opts: { contentType?: string; model?: string } = {},
 ): AsyncGenerator<string> {
   const client = getClient();
   if (!client) {
@@ -18,7 +18,7 @@ export async function* streamGeneration(
   }
 
   const stream = client.messages.stream({
-    model: DEFAULT_MODEL,
+    model: opts.model ?? DEFAULT_MODEL,
     max_tokens: 2048,
     system: SYSTEM,
     messages: [{ role: "user", content: prompt }],

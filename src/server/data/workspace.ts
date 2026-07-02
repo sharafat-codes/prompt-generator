@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { generationLimit, currentPeriod } from "@/lib/plans";
+import { generationLimit, currentPeriod, savedRecipeCap } from "@/lib/plans";
 
 function slugify(input: string) {
   return (
@@ -78,6 +78,7 @@ export async function getSidebarData(workspaceId: string, userId: string) {
     promptCount,
     starredCount,
     plan,
+    savedRecipesCap: savedRecipeCap(plan),
     generationsUsed: usage?.generations ?? 0,
     generationsLimit: generationLimit(plan),
   };

@@ -12,6 +12,7 @@ type SidebarUser = { name: string; email?: string | null; planLabel?: string };
 type SidebarStats = {
   promptCount: number;
   starredCount: number;
+  savedRecipesCap: number | null;
   generationsUsed: number;
   generationsLimit: number;
 };
@@ -50,7 +51,11 @@ export function Sidebar({ user, stats }: { user?: SidebarUser; stats?: SidebarSt
           <LayoutGrid size={16} className={libraryActive ? "text-accent" : "opacity-80"} />
           Library
           {stats && (
-            <span className="ml-auto text-xs text-ink-3 tabular-nums">{stats.promptCount}</span>
+            <span className="ml-auto text-xs text-ink-3 tabular-nums">
+              {stats.savedRecipesCap != null
+                ? `${stats.promptCount}/${stats.savedRecipesCap}`
+                : stats.promptCount}
+            </span>
           )}
         </Link>
 
