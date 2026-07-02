@@ -3,7 +3,13 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireSession, getCurrentWorkspaceId } from "@/server/context";
-import { createPrompt, createVersion, restoreVersion } from "@/server/data/prompts";
+import {
+  createPrompt,
+  createVersion,
+  restoreVersion,
+  setPromptVisibility,
+  getPublicPrompt,
+} from "@/server/data/prompts";
 import { prisma } from "@/lib/db";
 import { savedRecipeCap, modelForPlan } from "@/lib/plans";
 import { deriveVariables } from "@/lib/variables";
@@ -166,4 +172,56 @@ export async function improvePromptAction(
 
   revalidatePath(`/p/${prompt.slug}`);
   return { ok: true };
+}
+
+/** Publish/unpublish a prompt as a public shareable page (owner). */
+export async function togglePromptVisibility(
+  promptId: string,
+): Promise<{ visibility: "PRIVATE" | "PUBLIC"; publicSlug: string | null }> {
+  const session = await requireSession();
+  const workspaceId = session.user.workspaceId;
+  if (!workspaceId) throw new Error("No active workspace.");
+
+  const prompt = await prisma.prompt.findFirst({
+    where: { id: promptId, workspaceId },
+    select: { visibility: true, slug: true },
+  });
+  if (!prompt) throw new Error("Prompt not found.");
+
+  const result = await setPromptVisibility(workspaceId, promptId, prompt.visibility !== "PUBLIC");
+  revalidatePath(`/p/${prompt.slug}`);
+  if (result.publicSlug) revalidatePath(`/s/${result.publicSlug}`);
+  return result;
+}
+
+/** Clone a public prompt into the viewer's own library (the growth loop). */
+export async function clonePublicPrompt(
+  publicSlug: string,
+): Promise<{ slug: string } | { error: "recipe_limit" | "not_found" }> {
+  const session = await requireSession();
+  const workspaceId = session.user.workspaceId;
+  if (!workspaceId) throw new Error("No active workspace.");
+
+  const source = await getPublicPrompt(publicSlug);
+  if (!source) return { error: "not_found" };
+
+  const ws = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { plan: true },
+  });
+  const cap = savedRecipeCap(ws?.plan ?? "FREE");
+  if (cap !== null) {
+    const count = await prisma.prompt.count({ where: { workspaceId, status: "ACTIVE" } });
+    if (count >= cap) return { error: "recipe_limit" };
+  }
+
+  const slug = await createPrompt({
+    workspaceId,
+    userId: session.user.id,
+    title: source.title,
+    template: source.template,
+    variables: source.variables,
+  });
+  revalidatePath("/library");
+  return { slug };
 }

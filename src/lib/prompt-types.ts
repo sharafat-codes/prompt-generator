@@ -29,6 +29,15 @@ export type PromptDetail = {
   versionNumber: number;
   runCount: number;
   starred: boolean;
+  visibility: "PRIVATE" | "PUBLIC";
+  publicSlug: string | null;
+};
+
+export type PublicPromptView = {
+  title: string;
+  template: string;
+  variables: VariableSpec[];
+  publicSlug: string;
 };
 
 export type PromptVersionItem = {

@@ -1,12 +1,13 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { slugify } from "@/lib/slug";
+import { slugify, randomToken } from "@/lib/slug";
 import { extractVariables } from "@/lib/variables";
 import type {
   PromptListItem,
   PromptDetail,
   VariableSpec,
   PromptVersionItem,
+  PublicPromptView,
 } from "@/lib/prompt-types";
 
 // Every function takes workspaceId — reads/writes are always tenant-scoped.
@@ -68,7 +69,73 @@ export async function getPromptBySlug(
     versionNumber: prompt.currentVersion.versionNumber,
     runCount: prompt._count.runs,
     starred: prompt.favorites.length > 0,
+    visibility: prompt.visibility,
+    publicSlug: prompt.publicSlug,
   };
+}
+
+async function uniquePublicSlug(title: string) {
+  const base = slugify(title);
+  for (let i = 0; i < 5; i += 1) {
+    const candidate = `${base}-${randomToken(6)}`;
+    const exists = await prisma.prompt.findUnique({
+      where: { publicSlug: candidate },
+      select: { id: true },
+    });
+    if (!exists) return candidate;
+  }
+  return `${base}-${randomToken(10)}`;
+}
+
+/** Publish/unpublish a prompt. Generates a stable public slug on first publish. */
+export async function setPromptVisibility(
+  workspaceId: string,
+  promptId: string,
+  makePublic: boolean,
+): Promise<{ visibility: "PRIVATE" | "PUBLIC"; publicSlug: string | null }> {
+  const prompt = await prisma.prompt.findFirst({
+    where: { id: promptId, workspaceId },
+    select: { publicSlug: true, title: true },
+  });
+  if (!prompt) throw new Error("Prompt not found.");
+
+  if (!makePublic) {
+    await prisma.prompt.update({ where: { id: promptId }, data: { visibility: "PRIVATE" } });
+    return { visibility: "PRIVATE", publicSlug: prompt.publicSlug };
+  }
+
+  const publicSlug = prompt.publicSlug ?? (await uniquePublicSlug(prompt.title));
+  await prisma.prompt.update({
+    where: { id: promptId },
+    data: { visibility: "PUBLIC", publicSlug },
+  });
+  return { visibility: "PUBLIC", publicSlug };
+}
+
+/** A publicly-shared prompt, by its public slug (no workspace scoping). */
+export async function getPublicPrompt(publicSlug: string): Promise<PublicPromptView | null> {
+  const prompt = await prisma.prompt.findFirst({
+    where: { publicSlug, visibility: "PUBLIC", status: "ACTIVE" },
+    include: { currentVersion: true },
+  });
+  if (!prompt?.currentVersion || !prompt.publicSlug) return null;
+  return {
+    title: prompt.title,
+    template: prompt.currentVersion.template,
+    variables: (prompt.currentVersion.variables as unknown as VariableSpec[]) ?? [],
+    publicSlug: prompt.publicSlug,
+  };
+}
+
+/** All public prompts (for the sitemap). */
+export async function listPublicPrompts(): Promise<{ publicSlug: string; updatedAt: Date }[]> {
+  const prompts = await prisma.prompt.findMany({
+    where: { visibility: "PUBLIC", status: "ACTIVE", publicSlug: { not: null } },
+    select: { publicSlug: true, updatedAt: true },
+    orderBy: { updatedAt: "desc" },
+    take: 1000,
+  });
+  return prompts.flatMap((p) => (p.publicSlug ? [{ publicSlug: p.publicSlug, updatedAt: p.updatedAt }] : []));
 }
 
 /** Slim list (title + slug) for the command palette. */

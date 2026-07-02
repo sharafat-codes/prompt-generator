@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TemplatePreview } from "@/components/prompt/template-preview";
 import { StarButton } from "@/components/prompt/star-button";
+import { PromptShare } from "@/components/prompt/prompt-share";
 import {
   updatePromptTemplate,
   restorePromptVersion,
@@ -162,6 +163,12 @@ export function PromptRunner({
       <p className="mt-1 text-sm text-ink-2">
         {prompt.runCount === 0 ? "Not run yet" : `Reused ${prompt.runCount}×`}
       </p>
+
+      <PromptShare
+        promptId={prompt.id}
+        initialVisibility={prompt.visibility}
+        initialPublicSlug={prompt.publicSlug}
+      />
 
       {/* recipe (view / edit) */}
       <div className="mt-6">

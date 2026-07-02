@@ -153,6 +153,11 @@ enum PromptStatus {
   ARCHIVED
 }
 
+enum Visibility {
+  PRIVATE
+  PUBLIC
+}
+
 model Prompt {
   id               String       @id @default(cuid())
   workspaceId      String
@@ -160,6 +165,8 @@ model Prompt {
   title            String
   slug             String
   status           PromptStatus @default(DRAFT)
+  visibility       Visibility   @default(PRIVATE)
+  publicSlug       String?      @unique // set when shared publicly
   currentVersionId String?      @unique // pointer to the live version
   createdById      String
   createdAt        DateTime     @default(now())
