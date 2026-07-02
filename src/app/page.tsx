@@ -146,6 +146,15 @@ export default async function Home() {
               ]}
             />
           </div>
+          <div className="mt-8 text-center">
+            <Link
+              href="/tools"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:text-accent-hover"
+            >
+              Explore all free generators
+              <ArrowRight size={15} />
+            </Link>
+          </div>
         </div>
       </section>
 
