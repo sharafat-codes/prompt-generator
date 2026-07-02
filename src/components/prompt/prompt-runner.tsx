@@ -108,7 +108,7 @@ export function PromptRunner({ prompt, live }: { prompt: PromptDetail; live: boo
       <div className="mt-6 flex flex-wrap gap-2">
         <Button onClick={run} disabled={generating}>
           <Play size={15} />
-          {generating ? "Running…" : "Run prompt"}
+          {generating ? "Generating…" : "Generate"}
         </Button>
         <Button variant="ghost" size="sm" disabled>
           <Sparkles size={14} />

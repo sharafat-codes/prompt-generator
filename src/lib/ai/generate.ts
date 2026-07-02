@@ -43,6 +43,10 @@ const DEMO: Record<string, string> = {
     "Meet the Acme Blender Pro — the 20-second path from fridge to smoothie. A single-touch motor powers through frozen fruit and ice, while the one-piece cup rinses clean in seconds. Built for real mornings, not recipe blogs.",
   "social-caption":
     "1. 20 seconds. One cup. Zero excuses. 🥤 #morningroutine #smoothie #busyparents\n2. Breakfast sorted before the coffee's even brewed. ☕ #healthyhabits #quickmeals #blenderlife\n3. Less prep, more mornings back. 🙌 #mealprep #busymom #wellness",
+  "image-prompt":
+    "A cozy reading nook beside a rain-streaked window, worn leather armchair, stacks of well-loved books, a steaming mug on the sill — warm golden lamplight, soft shadows, shallow depth of field, muted autumn palette, cinematic, photorealistic, 35mm, highly detailed.",
+  "assistant-prompt":
+    'You are a senior email copywriter with over a decade in direct response. Your job is to write and sharpen cold emails that actually get replies. Keep them short, specific, and human: open with the reader\'s problem, one idea per email, a single soft call-to-action. Avoid hype, jargon, and generic flattery. When given a draft, rewrite it and briefly note what you changed and why.',
 };
 
 const DEMO_DEFAULT =
