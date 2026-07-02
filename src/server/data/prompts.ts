@@ -23,6 +23,7 @@ export async function listPrompts(
   return prompts.map((p) => {
     const template = p.currentVersion?.template ?? "";
     return {
+      id: p.id,
       slug: p.slug,
       title: p.title,
       template,

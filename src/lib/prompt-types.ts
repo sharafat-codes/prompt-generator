@@ -11,6 +11,7 @@ export type VariableSpec = {
 };
 
 export type PromptListItem = {
+  id: string;
   slug: string;
   title: string;
   template: string;

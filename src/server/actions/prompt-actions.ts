@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireSession, getCurrentWorkspaceId } from "@/server/context";
 import { createPrompt } from "@/server/data/prompts";
+import { prisma } from "@/lib/db";
 
 const variableSpec = z.object({
   key: z.string().min(1),
@@ -36,4 +37,28 @@ export async function savePrompt(input: z.infer<typeof saveSchema>) {
 
   revalidatePath("/library");
   return { slug };
+}
+
+/** Toggle the current user's star on a prompt (per-user favorite). */
+export async function toggleStar(promptId: string) {
+  const session = await requireSession();
+  const workspaceId = session.user.workspaceId;
+  if (!workspaceId) throw new Error("No active workspace.");
+
+  // Scope check: the prompt must belong to the caller's workspace.
+  const owned = await prisma.prompt.findFirst({
+    where: { id: promptId, workspaceId },
+    select: { id: true },
+  });
+  if (!owned) throw new Error("Prompt not found.");
+
+  const key = { userId_promptId: { userId: session.user.id, promptId } };
+  const existing = await prisma.favorite.findUnique({ where: key });
+  if (existing) {
+    await prisma.favorite.delete({ where: key });
+  } else {
+    await prisma.favorite.create({ data: { userId: session.user.id, promptId } });
+  }
+
+  revalidatePath("/library");
 }

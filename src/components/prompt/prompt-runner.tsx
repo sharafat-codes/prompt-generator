@@ -6,6 +6,7 @@ import { Play, Copy, Check, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TemplatePreview } from "@/components/prompt/template-preview";
+import { StarButton } from "@/components/prompt/star-button";
 import type { PromptDetail, VariableSpec } from "@/lib/prompt-types";
 import { cn } from "@/lib/utils";
 
@@ -80,7 +81,8 @@ export function PromptRunner({ prompt, live }: { prompt: PromptDetail; live: boo
           {prompt.title}
         </h1>
         <Badge>v{prompt.versionNumber}</Badge>
-        {!live && <span className="text-[11px] text-ink-3">demo mode</span>}
+        <StarButton promptId={prompt.id} starred={prompt.starred} size={18} />
+        {!live && <span className="ml-auto text-[11px] text-ink-3">demo mode</span>}
       </div>
       <p className="mt-1 text-sm text-ink-2">
         {prompt.runCount === 0 ? "Not run yet" : `Reused ${prompt.runCount}×`}

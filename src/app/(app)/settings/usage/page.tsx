@@ -1,15 +1,26 @@
+import { requireSession } from "@/server/context";
+import { getUsageStatus } from "@/server/data/workspace";
 import { UsageMeter } from "@/components/layout/usage-meter";
 
-export default function UsagePage() {
+const PLAN_LABEL: Record<string, string> = { FREE: "Free", PRO: "Pro", TEAM: "Team" };
+
+export default async function UsagePage() {
+  const session = await requireSession();
+  const workspaceId = session.user.workspaceId;
+  const usage = workspaceId ? await getUsageStatus(workspaceId) : null;
+
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <h1 className="font-serif text-2xl font-semibold tracking-[-0.015em]">Plan &amp; usage</h1>
       <p className="mt-2 mb-6 text-ink-2">
-        You&apos;re on the Free plan. Metering is enforced server-side on every generation.
+        You&apos;re on the {usage ? PLAN_LABEL[usage.plan] ?? usage.plan : "Free"} plan. Metering is
+        enforced server-side on every generation.
       </p>
-      <div className="max-w-xs">
-        <UsageMeter used={142} limit={200} />
-      </div>
+      {usage && (
+        <div className="max-w-xs">
+          <UsageMeter used={usage.used} limit={usage.limit} />
+        </div>
+      )}
     </div>
   );
 }

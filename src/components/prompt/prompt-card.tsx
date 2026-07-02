@@ -1,27 +1,20 @@
 import Link from "next/link";
-import { Star } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TemplatePreview } from "@/components/prompt/template-preview";
+import { StarButton } from "@/components/prompt/star-button";
 import type { PromptListItem } from "@/lib/prompt-types";
-import { cn } from "@/lib/utils";
 
 export function PromptCard({ prompt }: { prompt: PromptListItem }) {
-  const { variableCount: vars } = prompt;
+  const vars = prompt.variableCount;
   return (
     <Link href={`/p/${prompt.slug}`} className="group block">
-      <Card className="flex h-full flex-col gap-[11px] p-4 transition-[box-shadow,transform,border-color] duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md group-hover:border-hairline-2">
+      <Card className="flex h-full flex-col gap-[11px] p-4 transition-[box-shadow,transform,border-color] duration-200 group-hover:-translate-y-0.5 group-hover:border-hairline-2 group-hover:shadow-md">
         <div className="flex items-start justify-between gap-2.5">
-          <h3 className="text-[15px] font-semibold tracking-[-0.01em] leading-snug">
+          <h3 className="text-[15px] font-semibold leading-snug tracking-[-0.01em]">
             {prompt.title}
           </h3>
-          <Star
-            size={16}
-            className={cn(
-              "shrink-0 mt-0.5",
-              prompt.starred ? "fill-star text-star" : "text-ink-3",
-            )}
-          />
+          <StarButton promptId={prompt.id} starred={prompt.starred} />
         </div>
 
         <div className="rounded-sm border border-hairline bg-surface-2 px-[11px] py-2.5">
