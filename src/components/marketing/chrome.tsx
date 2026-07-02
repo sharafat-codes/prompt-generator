@@ -12,12 +12,17 @@ export function SiteHeader() {
           <Mark size={28} />
           <span className="text-[16px] font-semibold tracking-[-0.01em]">PromptPilot</span>
         </Link>
-        <Link
-          href="/login"
-          className="rounded-sm border border-hairline-2 bg-surface px-4 py-2 text-sm font-semibold text-ink shadow-sm transition-colors hover:border-ink-3"
-        >
-          Sign in
-        </Link>
+        <div className="flex items-center gap-5">
+          <Link href="/pricing" className="text-sm font-semibold text-ink-2 hover:text-ink">
+            Pricing
+          </Link>
+          <Link
+            href="/login"
+            className="rounded-sm border border-hairline-2 bg-surface px-4 py-2 text-sm font-semibold text-ink shadow-sm transition-colors hover:border-ink-3"
+          >
+            Sign in
+          </Link>
+        </div>
       </div>
     </header>
   );
@@ -31,12 +36,17 @@ export function SiteFooter() {
           <Mark size={22} />
           <span className="font-semibold text-ink-2">PromptPilot</span>
         </Link>
-        <Link href="/tools" className="hover:text-ink-2">
-          All generators
-        </Link>
-        <Link href="/login" className="font-semibold text-ink-2 hover:text-ink">
-          Sign in
-        </Link>
+        <div className="flex items-center gap-5">
+          <Link href="/tools" className="hover:text-ink-2">
+            Generators
+          </Link>
+          <Link href="/pricing" className="hover:text-ink-2">
+            Pricing
+          </Link>
+          <Link href="/login" className="font-semibold text-ink-2 hover:text-ink">
+            Sign in
+          </Link>
+        </div>
       </div>
     </footer>
   );

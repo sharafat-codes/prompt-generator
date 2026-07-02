@@ -21,7 +21,7 @@ export function UsageMeter({ used, limit }: { used: number; limit: number }) {
         />
       </div>
       <Link
-        href="/settings/usage"
+        href="/pricing"
         className="mt-2.5 block text-xs font-semibold text-accent hover:text-accent-hover"
       >
         Upgrade to Pro →

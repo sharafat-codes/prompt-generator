@@ -49,12 +49,17 @@ export default async function Home() {
             <Mark size={28} />
             <span className="text-[16px] font-semibold tracking-[-0.01em]">PromptPilot</span>
           </div>
-          <Link
-            href="/login"
-            className="rounded-sm border border-hairline-2 bg-surface px-4 py-2 text-sm font-semibold text-ink shadow-sm transition-colors hover:border-ink-3"
-          >
-            Sign in
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link href="/pricing" className="text-sm font-semibold text-ink-2 hover:text-ink">
+              Pricing
+            </Link>
+            <Link
+              href="/login"
+              className="rounded-sm border border-hairline-2 bg-surface px-4 py-2 text-sm font-semibold text-ink shadow-sm transition-colors hover:border-ink-3"
+            >
+              Sign in
+            </Link>
+          </div>
         </div>
       </header>
 

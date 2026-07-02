@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireSession } from "@/server/context";
 import { getUsageStatus } from "@/server/data/workspace";
 import { UsageMeter } from "@/components/layout/usage-meter";
@@ -20,6 +21,14 @@ export default async function UsagePage() {
         <div className="max-w-xs">
           <UsageMeter used={usage.used} limit={usage.limit} />
         </div>
+      )}
+      {usage?.plan !== "TEAM" && (
+        <Link
+          href="/pricing"
+          className="mt-6 inline-flex h-10 items-center rounded-sm bg-accent px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover"
+        >
+          Compare plans &amp; upgrade →
+        </Link>
       )}
     </div>
   );
