@@ -16,6 +16,7 @@ import {
 import { getSessionSafe } from "@/server/context";
 import { Mark } from "@/components/layout/mark";
 import { VarToken } from "@/components/ui/var-token";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 
 const ctaPrimary =
   "inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-accent px-5 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
@@ -24,8 +25,23 @@ export default async function Home() {
   const session = await getSessionSafe();
   if (session?.user) redirect("/library");
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: SITE_NAME,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* nav */}
       <header className="sticky top-0 z-50 border-b border-hairline bg-ground/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
