@@ -1,6 +1,8 @@
 import { Sidebar } from "@/components/layout/sidebar";
+import { CommandPalette } from "@/components/layout/command-palette";
 import { requireSession } from "@/server/context";
 import { getSidebarData } from "@/server/data/workspace";
+import { listPromptSummaries } from "@/server/data/prompts";
 
 const PLAN_LABEL: Record<string, string> = {
   FREE: "Free plan",
@@ -12,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await requireSession();
   const workspaceId = session.user.workspaceId;
   const stats = workspaceId ? await getSidebarData(workspaceId, session.user.id) : undefined;
+  const prompts = workspaceId ? await listPromptSummaries(workspaceId) : [];
 
   const user = {
     name: session.user.name ?? session.user.email ?? "You",
@@ -20,9 +23,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex min-h-full">
+    <div className="min-h-full lg:flex">
       <Sidebar user={user} stats={stats} />
       <main className="min-w-0 flex-1">{children}</main>
+      <CommandPalette prompts={prompts} />
     </div>
   );
 }

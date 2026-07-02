@@ -71,6 +71,18 @@ export async function getPromptBySlug(
   };
 }
 
+/** Slim list (title + slug) for the command palette. */
+export async function listPromptSummaries(
+  workspaceId: string,
+): Promise<{ title: string; slug: string }[]> {
+  return prisma.prompt.findMany({
+    where: { workspaceId, status: "ACTIVE" },
+    orderBy: { updatedAt: "desc" },
+    select: { title: true, slug: true },
+    take: 200,
+  });
+}
+
 async function uniqueSlug(workspaceId: string, title: string) {
   const base = slugify(title);
   let slug = base;
