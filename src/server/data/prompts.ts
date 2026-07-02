@@ -9,9 +9,14 @@ import type { PromptListItem, PromptDetail, VariableSpec } from "@/lib/prompt-ty
 export async function listPrompts(
   workspaceId: string,
   userId: string,
+  opts: { q?: string; starredOnly?: boolean } = {},
 ): Promise<PromptListItem[]> {
+  const where: Prisma.PromptWhereInput = { workspaceId, status: "ACTIVE" };
+  if (opts.q) where.title = { contains: opts.q, mode: "insensitive" };
+  if (opts.starredOnly) where.favorites = { some: { userId } };
+
   const prompts = await prisma.prompt.findMany({
-    where: { workspaceId, status: "ACTIVE" },
+    where,
     orderBy: { updatedAt: "desc" },
     include: {
       currentVersion: { select: { template: true } },

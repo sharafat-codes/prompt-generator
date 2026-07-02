@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Plus } from "lucide-react";
+import { LayoutGrid, Plus, Star } from "lucide-react";
 import { Mark } from "./mark";
 import { UsageMeter } from "./usage-meter";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type SidebarUser = { name: string; email?: string | null; planLabel?: string };
-type SidebarStats = { promptCount: number; generationsUsed: number; generationsLimit: number };
+type SidebarStats = {
+  promptCount: number;
+  starredCount: number;
+  generationsUsed: number;
+  generationsLimit: number;
+};
 
 export function Sidebar({ user, stats }: { user?: SidebarUser; stats?: SidebarStats }) {
   const pathname = usePathname();
@@ -46,6 +51,17 @@ export function Sidebar({ user, stats }: { user?: SidebarUser; stats?: SidebarSt
           Library
           {stats && (
             <span className="ml-auto text-xs text-ink-3 tabular-nums">{stats.promptCount}</span>
+          )}
+        </Link>
+
+        <Link
+          href="/library?view=starred"
+          className="flex items-center gap-[11px] rounded-sm px-2.5 py-2 text-sm font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
+        >
+          <Star size={16} className="opacity-80" />
+          Starred
+          {stats && (
+            <span className="ml-auto text-xs text-ink-3 tabular-nums">{stats.starredCount}</span>
           )}
         </Link>
       </nav>

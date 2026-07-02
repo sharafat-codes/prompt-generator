@@ -11,7 +11,7 @@ const PLAN_LABEL: Record<string, string> = {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
   const workspaceId = session.user.workspaceId;
-  const stats = workspaceId ? await getSidebarData(workspaceId) : undefined;
+  const stats = workspaceId ? await getSidebarData(workspaceId, session.user.id) : undefined;
 
   const user = {
     name: session.user.name ?? session.user.email ?? "You",

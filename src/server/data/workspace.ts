@@ -62,10 +62,11 @@ export async function getUsageStatus(workspaceId: string) {
   return { plan, used, limit, remaining: Math.max(0, limit - used), over: used >= limit };
 }
 
-/** Real counts for the sidebar: prompt count, plan, and current-period usage. */
-export async function getSidebarData(workspaceId: string) {
-  const [promptCount, workspace, usage] = await Promise.all([
+/** Real counts for the sidebar: prompt count, starred count, plan, and usage. */
+export async function getSidebarData(workspaceId: string, userId: string) {
+  const [promptCount, starredCount, workspace, usage] = await Promise.all([
     prisma.prompt.count({ where: { workspaceId, status: "ACTIVE" } }),
+    prisma.favorite.count({ where: { userId, prompt: { workspaceId } } }),
     prisma.workspace.findUnique({ where: { id: workspaceId }, select: { plan: true } }),
     prisma.usageCounter.findUnique({
       where: { workspaceId_period: { workspaceId, period: currentPeriod() } },
@@ -75,6 +76,7 @@ export async function getSidebarData(workspaceId: string) {
   const plan = workspace?.plan ?? "FREE";
   return {
     promptCount,
+    starredCount,
     plan,
     generationsUsed: usage?.generations ?? 0,
     generationsLimit: generationLimit(plan),
