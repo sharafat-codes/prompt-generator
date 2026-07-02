@@ -11,6 +11,7 @@ import {
   CreditCard,
   FileText,
   CornerDownLeft,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +61,7 @@ export function CommandPalette({ prompts }: { prompts: { title: string; slug: st
     { id: "new", label: "New prompt", href: "/create", icon: <Plus size={16} />, keywords: "create generate" },
     { id: "library", label: "Library", href: "/library", icon: <LayoutGrid size={16} /> },
     { id: "starred", label: "Starred", href: "/library?view=starred", icon: <Star size={16} /> },
+    { id: "insights", label: "Insights", href: "/insights", icon: <BarChart3 size={16} /> },
     { id: "billing", label: "Plan & usage", href: "/settings/usage", icon: <CreditCard size={16} />, keywords: "upgrade billing plan" },
     { id: "settings", label: "Settings", href: "/settings", icon: <Settings size={16} /> },
   ];

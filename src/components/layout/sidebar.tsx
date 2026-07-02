@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Plus, Star, Search, Menu, X } from "lucide-react";
+import { LayoutGrid, Plus, Star, Search, Menu, X, BarChart3 } from "lucide-react";
 import { Mark } from "./mark";
 import { UsageMeter } from "./usage-meter";
 import { Button } from "@/components/ui/button";
@@ -131,6 +131,19 @@ export function Sidebar({ user, stats }: { user?: SidebarUser; stats?: SidebarSt
             {stats && (
               <span className="ml-auto text-xs text-ink-3 tabular-nums">{stats.starredCount}</span>
             )}
+          </Link>
+
+          <Link
+            href="/insights"
+            className={cn(
+              "flex items-center gap-[11px] rounded-sm px-2.5 py-2 text-sm font-medium transition-colors",
+              pathname === "/insights"
+                ? "bg-mint text-accent-press"
+                : "text-ink-2 hover:bg-surface-2 hover:text-ink",
+            )}
+          >
+            <BarChart3 size={16} className={pathname === "/insights" ? "text-accent" : "opacity-80"} />
+            Insights
           </Link>
         </nav>
 
