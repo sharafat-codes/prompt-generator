@@ -114,6 +114,12 @@ model Workspace {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
+  // Stripe billing (subscription per workspace)
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripeStatus           String?
+  stripeCurrentPeriodEnd DateTime?
+
   members     Membership[]
   prompts     Prompt[]
   collections Collection[]
