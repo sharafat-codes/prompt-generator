@@ -3,9 +3,12 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireSession, getCurrentWorkspaceId } from "@/server/context";
-import { createPrompt } from "@/server/data/prompts";
+import { createPrompt, createVersion, restoreVersion } from "@/server/data/prompts";
 import { prisma } from "@/lib/db";
-import { savedRecipeCap } from "@/lib/plans";
+import { savedRecipeCap, modelForPlan } from "@/lib/plans";
+import { deriveVariables } from "@/lib/variables";
+import { improveTemplate } from "@/lib/ai/generate";
+import type { VariableSpec } from "@/lib/prompt-types";
 
 const variableSpec = z.object({
   key: z.string().min(1),
@@ -75,4 +78,92 @@ export async function toggleStar(promptId: string) {
   }
 
   revalidatePath("/library");
+}
+
+/** Edit a recipe → save as a NEW immutable version. Available to all plans. */
+export async function updatePromptTemplate(promptId: string, template: string) {
+  const session = await requireSession();
+  const workspaceId = session.user.workspaceId;
+  if (!workspaceId) throw new Error("No active workspace.");
+
+  const clean = template.trim();
+  if (!clean) throw new Error("The recipe can't be empty.");
+
+  const prompt = await prisma.prompt.findFirst({
+    where: { id: promptId, workspaceId },
+    select: { slug: true, currentVersion: { select: { variables: true } } },
+  });
+  if (!prompt) throw new Error("Prompt not found.");
+
+  const previous = (prompt.currentVersion?.variables as unknown as VariableSpec[]) ?? [];
+  await createVersion({
+    workspaceId,
+    userId: session.user.id,
+    promptId,
+    template: clean,
+    variables: deriveVariables(clean, previous),
+  });
+
+  revalidatePath(`/p/${prompt.slug}`);
+  revalidatePath("/library");
+}
+
+/** Restore an earlier version (Pro feature). */
+export async function restorePromptVersion(
+  promptId: string,
+  versionId: string,
+): Promise<{ ok: true } | { error: "pro_required" }> {
+  const session = await requireSession();
+  const workspaceId = session.user.workspaceId;
+  if (!workspaceId) throw new Error("No active workspace.");
+
+  const ws = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { plan: true },
+  });
+  if ((ws?.plan ?? "FREE") === "FREE") return { error: "pro_required" };
+
+  await restoreVersion(workspaceId, promptId, versionId);
+
+  const prompt = await prisma.prompt.findFirst({
+    where: { id: promptId, workspaceId },
+    select: { slug: true },
+  });
+  if (prompt) revalidatePath(`/p/${prompt.slug}`);
+  return { ok: true };
+}
+
+/** AI-improve the current recipe → save as a new version (Pro feature). */
+export async function improvePromptAction(
+  promptId: string,
+): Promise<{ ok: true } | { error: "pro_required" }> {
+  const session = await requireSession();
+  const workspaceId = session.user.workspaceId;
+  if (!workspaceId) throw new Error("No active workspace.");
+
+  const ws = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { plan: true },
+  });
+  const plan = ws?.plan ?? "FREE";
+  if (plan === "FREE") return { error: "pro_required" };
+
+  const prompt = await prisma.prompt.findFirst({
+    where: { id: promptId, workspaceId },
+    select: { slug: true, currentVersion: { select: { template: true, variables: true } } },
+  });
+  if (!prompt?.currentVersion) throw new Error("Prompt not found.");
+
+  const improved = await improveTemplate(prompt.currentVersion.template, modelForPlan(plan));
+  const previous = (prompt.currentVersion.variables as unknown as VariableSpec[]) ?? [];
+  await createVersion({
+    workspaceId,
+    userId: session.user.id,
+    promptId,
+    template: improved,
+    variables: deriveVariables(improved, previous),
+  });
+
+  revalidatePath(`/p/${prompt.slug}`);
+  return { ok: true };
 }

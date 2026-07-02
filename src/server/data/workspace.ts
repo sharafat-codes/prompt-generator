@@ -47,6 +47,15 @@ export async function getPrimaryWorkspaceId(userId: string) {
   return membership?.workspaceId ?? null;
 }
 
+/** The workspace's plan tier (defaults to FREE). */
+export async function getWorkspacePlan(workspaceId: string) {
+  const ws = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { plan: true },
+  });
+  return ws?.plan ?? "FREE";
+}
+
 /** Current-period generation usage vs the workspace's plan limit. */
 export async function getUsageStatus(workspaceId: string) {
   const [workspace, usage] = await Promise.all([

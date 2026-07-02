@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireSession } from "@/server/context";
-import { getPromptBySlug } from "@/server/data/prompts";
+import { getPromptBySlug, getPromptVersions } from "@/server/data/prompts";
+import { getWorkspacePlan } from "@/server/data/workspace";
 import { hasApiKey } from "@/lib/ai/provider";
 import { PromptRunner } from "@/components/prompt/prompt-runner";
 
@@ -15,5 +16,11 @@ export default async function PromptDetailPage({
   const prompt = workspaceId ? await getPromptBySlug(workspaceId, session.user.id, slug) : null;
   if (!prompt) notFound();
 
-  return <PromptRunner prompt={prompt} live={hasApiKey()} />;
+  const plan = workspaceId ? await getWorkspacePlan(workspaceId) : "FREE";
+  const canManage = plan !== "FREE"; // history + restore + improve are Pro
+  const versions = canManage && workspaceId ? await getPromptVersions(workspaceId, prompt.id) : [];
+
+  return (
+    <PromptRunner prompt={prompt} live={hasApiKey()} canManage={canManage} versions={versions} />
+  );
 }

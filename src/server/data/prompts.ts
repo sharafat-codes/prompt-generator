@@ -2,7 +2,12 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import { extractVariables } from "@/lib/variables";
-import type { PromptListItem, PromptDetail, VariableSpec } from "@/lib/prompt-types";
+import type {
+  PromptListItem,
+  PromptDetail,
+  VariableSpec,
+  PromptVersionItem,
+} from "@/lib/prompt-types";
 
 // Every function takes workspaceId — reads/writes are always tenant-scoped.
 
@@ -124,4 +129,79 @@ export async function createPrompt(params: {
   });
 
   return slug;
+}
+
+/** Add a new immutable version to an existing prompt and make it current. */
+export async function createVersion(params: {
+  workspaceId: string;
+  userId: string;
+  promptId: string;
+  template: string;
+  variables: VariableSpec[];
+}) {
+  const owned = await prisma.prompt.findFirst({
+    where: { id: params.promptId, workspaceId: params.workspaceId },
+    select: { id: true },
+  });
+  if (!owned) throw new Error("Prompt not found.");
+
+  const last = await prisma.promptVersion.findFirst({
+    where: { promptId: params.promptId },
+    orderBy: { versionNumber: "desc" },
+    select: { versionNumber: true },
+  });
+  const versionNumber = (last?.versionNumber ?? 0) + 1;
+
+  await prisma.$transaction(async (tx) => {
+    const version = await tx.promptVersion.create({
+      data: {
+        promptId: params.promptId,
+        versionNumber,
+        template: params.template,
+        variables: params.variables as unknown as Prisma.InputJsonValue,
+        createdById: params.userId,
+      },
+    });
+    await tx.prompt.update({
+      where: { id: params.promptId },
+      data: { currentVersionId: version.id },
+    });
+  });
+}
+
+export async function getPromptVersions(
+  workspaceId: string,
+  promptId: string,
+): Promise<PromptVersionItem[]> {
+  const prompt = await prisma.prompt.findFirst({
+    where: { id: promptId, workspaceId },
+    select: { currentVersionId: true },
+  });
+  if (!prompt) return [];
+
+  const versions = await prisma.promptVersion.findMany({
+    where: { promptId },
+    orderBy: { versionNumber: "desc" },
+    select: { id: true, versionNumber: true, createdAt: true },
+  });
+
+  return versions.map((v) => ({
+    id: v.id,
+    versionNumber: v.versionNumber,
+    createdAt: v.createdAt.toISOString(),
+    isCurrent: v.id === prompt.currentVersionId,
+  }));
+}
+
+/** Point currentVersionId back at an earlier version. */
+export async function restoreVersion(workspaceId: string, promptId: string, versionId: string) {
+  const version = await prisma.promptVersion.findFirst({
+    where: { id: versionId, promptId, prompt: { workspaceId } },
+    select: { id: true },
+  });
+  if (!version) throw new Error("Version not found.");
+  await prisma.prompt.update({
+    where: { id: promptId },
+    data: { currentVersionId: versionId },
+  });
 }

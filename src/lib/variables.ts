@@ -2,6 +2,8 @@
 // Parsing them powers the token highlighting in the library and the
 // "tokens become fields" experience on the run screen.
 
+import type { VariableSpec } from "@/lib/prompt-types";
+
 const TOKEN = /\{([a-zA-Z0-9_]+)\}/g;
 
 export type TemplateSegment =
@@ -37,4 +39,21 @@ export function extractVariables(template: string): string[] {
     seen.add(match[1]);
   }
   return [...seen];
+}
+
+/** Turn a token key into a human label, e.g. "target_audience" → "Target audience". */
+export function labelize(key: string): string {
+  const s = key.replace(/[_-]+/g, " ").trim();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Re-derive the variable schema from a (possibly edited) template: keep the
+ * spec for tokens that still exist, default new tokens to a text field.
+ */
+export function deriveVariables(template: string, previous: VariableSpec[] = []): VariableSpec[] {
+  const prev = new Map(previous.map((v) => [v.key, v]));
+  return extractVariables(template).map(
+    (key) => prev.get(key) ?? { key, label: labelize(key), type: "text" as const },
+  );
 }

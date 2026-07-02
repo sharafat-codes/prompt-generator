@@ -30,3 +30,10 @@ export type PromptDetail = {
   runCount: number;
   starred: boolean;
 };
+
+export type PromptVersionItem = {
+  id: string;
+  versionNumber: number;
+  createdAt: string; // ISO
+  isCurrent: boolean;
+};

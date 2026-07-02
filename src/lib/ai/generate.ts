@@ -31,6 +31,29 @@ export async function* streamGeneration(
   }
 }
 
+const IMPROVE_SYSTEM = `You improve prompt templates. Rewrite the given template so it produces clearer, more effective, more specific results. Rules: preserve every {token} exactly (same names, same casing); do not add or remove tokens; keep it concise. Return ONLY the improved template text — no preamble, no quotes, no explanation.`;
+
+/** Rewrite a template into a stronger one (non-streaming). Demo-safe. */
+export async function improveTemplate(template: string, model?: string): Promise<string> {
+  const client = getClient();
+  if (!client) {
+    // Demo: a light, deterministic touch-up that keeps tokens intact.
+    const base = template.trim().replace(/\s+$/, "");
+    return `${base.replace(/\.$/, "")}. Be specific and concrete, lead with the most important point, and match the requested tone.`;
+  }
+  const message = await client.messages.create({
+    model: model ?? DEFAULT_MODEL,
+    max_tokens: 1024,
+    system: IMPROVE_SYSTEM,
+    messages: [{ role: "user", content: template }],
+  });
+  const text = message.content
+    .map((block) => (block.type === "text" ? block.text : ""))
+    .join("")
+    .trim();
+  return text || template;
+}
+
 // ── Demo mode ─────────────────────────────────────────────────────────────
 const DEMO: Record<string, string> = {
   "marketing-email":
