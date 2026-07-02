@@ -138,6 +138,51 @@ export async function listPublicPrompts(): Promise<{ publicSlug: string; updated
   return prompts.flatMap((p) => (p.publicSlug ? [{ publicSlug: p.publicSlug, updatedAt: p.updatedAt }] : []));
 }
 
+const STARTER_PROMPTS: { title: string; template: string; variables: VariableSpec[] }[] = [
+  {
+    title: "Product launch email",
+    template:
+      "Write a {tone} launch email for {product}, targeting {audience}. Lead with the single biggest benefit and end with one clear call-to-action.",
+    variables: [
+      { key: "product", label: "Product", type: "text" },
+      { key: "audience", label: "Audience", type: "text" },
+      { key: "tone", label: "Tone", type: "select", options: ["Friendly", "Bold", "Premium", "Playful"] },
+    ],
+  },
+  {
+    title: "Instagram caption pack",
+    template: "Write 5 {tone} Instagram captions for {product}, each with 3 relevant hashtags.",
+    variables: [
+      { key: "product", label: "Product", type: "text" },
+      { key: "tone", label: "Tone", type: "select", options: ["Friendly", "Bold", "Premium", "Playful"] },
+    ],
+  },
+  {
+    title: "Midjourney image prompt",
+    template:
+      "Write a vivid, detailed image-generation prompt for {subject}. Style: {style}. Mood and lighting: {mood}. Detail level: {detail}. Return a single prompt with rich, comma-separated visual descriptors.",
+    variables: [
+      { key: "subject", label: "Subject", type: "text" },
+      { key: "style", label: "Style", type: "select", options: ["Photorealistic", "Cinematic", "Digital art", "Illustration"] },
+      { key: "mood", label: "Mood & lighting", type: "text" },
+      { key: "detail", label: "Detail level", type: "select", options: ["Simple", "Detailed", "Expert"] },
+    ],
+  },
+];
+
+/** Seed a new workspace with a few example recipes so the library isn't empty. */
+export async function seedStarterPrompts(workspaceId: string, userId: string) {
+  for (const starter of STARTER_PROMPTS) {
+    await createPrompt({
+      workspaceId,
+      userId,
+      title: starter.title,
+      template: starter.template,
+      variables: starter.variables,
+    });
+  }
+}
+
 /** Slim list (title + slug) for the command palette. */
 export async function listPromptSummaries(
   workspaceId: string,

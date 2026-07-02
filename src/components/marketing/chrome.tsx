@@ -36,12 +36,18 @@ export function SiteFooter() {
           <Mark size={22} />
           <span className="font-semibold text-ink-2">PromptPilot</span>
         </Link>
-        <div className="flex items-center gap-5">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
           <Link href="/tools" className="hover:text-ink-2">
             Generators
           </Link>
           <Link href="/pricing" className="hover:text-ink-2">
             Pricing
+          </Link>
+          <Link href="/privacy" className="hover:text-ink-2">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-ink-2">
+            Terms
           </Link>
           <Link href="/login" className="font-semibold text-ink-2 hover:text-ink">
             Sign in

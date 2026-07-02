@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { generationLimit, currentPeriod, savedRecipeCap } from "@/lib/plans";
+import { seedStarterPrompts } from "@/server/data/prompts";
 
 function slugify(input: string) {
   return (
@@ -34,6 +35,14 @@ export async function ensurePersonalWorkspace(userId: string, displayName: strin
     },
     select: { id: true },
   });
+
+  // Seed a few example recipes so the first library view isn't empty.
+  try {
+    await seedStarterPrompts(workspace.id, userId);
+  } catch {
+    // never block sign-up on seeding
+  }
+
   return workspace.id;
 }
 
