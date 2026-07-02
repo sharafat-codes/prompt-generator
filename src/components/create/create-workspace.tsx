@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Send, Sparkles, Copy, Download, RotateCcw, Check } from "lucide-react";
+import { savePrompt } from "@/server/actions/prompt-actions";
 import { CONTENT_TYPES, type ContentType } from "@/lib/content-types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +26,8 @@ export function CreateWorkspace({ live }: { live: boolean }) {
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -48,19 +52,23 @@ export function CreateWorkspace({ live }: { live: boolean }) {
     setStep(step + 1);
     if (step + 1 >= type.questions.length) {
       setPhase("result");
-      void generate(fillTemplate(type.template, next), type.key);
+      void generate(fillTemplate(type.template, next), type.key, next);
     }
   }
 
-  async function generate(prompt: string, contentType: string) {
+  async function generate(prompt: string, contentType: string, inputs: Record<string, string>) {
     setGenerating(true);
     setOutput("");
     try {
       const res = await fetch("/api/prompts/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, contentType }),
+        body: JSON.stringify({ prompt, contentType, inputs }),
       });
+      if (res.status === 402) {
+        setOutput("You've reached your free monthly limit of generations. Upgrade to keep creating.");
+        return;
+      }
       if (!res.ok || !res.body) {
         setOutput("Something went wrong generating your draft. Please try again.");
         return;
@@ -94,9 +102,31 @@ export function CreateWorkspace({ live }: { live: boolean }) {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  function comingWithDb() {
-    setToast("Saving to your library unlocks once the database is connected — the next build step.");
-    setTimeout(() => setToast(null), 3500);
+  async function handleSave() {
+    if (!type) return;
+    setSaving(true);
+    try {
+      const { slug } = await savePrompt({
+        title: type.label + (answers.product ? ` — ${answers.product}` : ""),
+        template: type.template,
+        variables: type.questions.map((q) => ({
+          key: q.key,
+          label: q.label,
+          type: q.type,
+          options: q.options,
+          placeholder: q.placeholder,
+        })),
+      });
+      router.push(`/p/${slug}`);
+    } catch {
+      setSaving(false);
+      setToast("Couldn't save just now — please try again.");
+    }
+  }
+
+  function comingSoon() {
+    setToast("The prompt optimizer is coming soon.");
+    setTimeout(() => setToast(null), 3000);
   }
 
   // ── Pick phase ────────────────────────────────────────────────────────
@@ -230,7 +260,7 @@ export function CreateWorkspace({ live }: { live: boolean }) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={comingWithDb}>
+              <Button variant="secondary" size="sm" onClick={comingSoon}>
                 <Sparkles size={14} />
                 Improve
               </Button>
@@ -238,9 +268,9 @@ export function CreateWorkspace({ live }: { live: boolean }) {
                 {copied ? <Check size={14} /> : <Copy size={14} />}
                 {copied ? "Copied" : "Copy"}
               </Button>
-              <Button size="sm" onClick={comingWithDb}>
+              <Button size="sm" onClick={handleSave} disabled={saving || generating}>
                 <Download size={14} />
-                Save to library
+                {saving ? "Saving…" : "Save to library"}
               </Button>
             </div>
 

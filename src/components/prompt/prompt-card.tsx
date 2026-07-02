@@ -3,11 +3,11 @@ import { Star } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TemplatePreview } from "@/components/prompt/template-preview";
-import { varCount, type MockPrompt } from "@/lib/mock-data";
+import type { PromptListItem } from "@/lib/prompt-types";
 import { cn } from "@/lib/utils";
 
-export function PromptCard({ prompt }: { prompt: MockPrompt }) {
-  const vars = varCount(prompt.template);
+export function PromptCard({ prompt }: { prompt: PromptListItem }) {
+  const { variableCount: vars } = prompt;
   return (
     <Link href={`/p/${prompt.slug}`} className="group block">
       <Card className="flex h-full flex-col gap-[11px] p-4 transition-[box-shadow,transform,border-color] duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md group-hover:border-hairline-2">
@@ -34,8 +34,9 @@ export function PromptCard({ prompt }: { prompt: MockPrompt }) {
           <Badge>
             {vars} var{vars === 1 ? "" : "s"}
           </Badge>
-          <span>{prompt.tag}</span>
-          <span className="ml-auto tabular-nums">Run {prompt.runs}×</span>
+          <span className="ml-auto tabular-nums">
+            {prompt.runCount === 0 ? "Not run yet" : `Run ${prompt.runCount}×`}
+          </span>
         </div>
       </Card>
     </Link>
