@@ -5,7 +5,15 @@ import { Mark } from "@/components/layout/mark";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+  const { callbackUrl } = await searchParams;
+  // Only honor same-origin relative paths, so an invite link returns the user
+  // to /join/<token> — never an attacker-supplied external URL.
+  const dest = callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/library";
   const hasGitHub = Boolean(process.env.AUTH_GITHUB_ID);
   const hasGoogle = Boolean(process.env.AUTH_GOOGLE_ID);
   const configured = hasGitHub || hasGoogle;
@@ -28,7 +36,7 @@ export default function LoginPage() {
             <form
               action={async () => {
                 "use server";
-                await signIn("github", { redirectTo: "/library" });
+                await signIn("github", { redirectTo: dest });
               }}
             >
               <Button variant="secondary" className="w-full">
@@ -41,7 +49,7 @@ export default function LoginPage() {
             <form
               action={async () => {
                 "use server";
-                await signIn("google", { redirectTo: "/library" });
+                await signIn("google", { redirectTo: dest });
               }}
             >
               <Button variant="secondary" className="w-full">

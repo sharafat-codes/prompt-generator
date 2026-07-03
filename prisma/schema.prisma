@@ -32,6 +32,9 @@ model User {
   emailVerified DateTime? // required by the Auth.js Prisma adapter
   name          String?
   image         String?
+  // Which workspace the user is currently acting in (they may belong to several).
+  // Falls back to the oldest membership when null or no longer a member.
+  activeWorkspaceId String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -111,6 +114,9 @@ model Workspace {
   slug      String        @unique
   type      WorkspaceType @default(PERSONAL)
   plan      PlanTier      @default(FREE)
+  // Rotating invite link for TEAM workspaces; null until sharing is enabled.
+  // Owners can regenerate it to revoke outstanding links.
+  inviteToken String?     @unique
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 

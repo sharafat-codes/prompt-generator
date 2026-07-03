@@ -3,7 +3,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/db";
-import { ensurePersonalWorkspace, getPrimaryWorkspaceId } from "@/server/data/workspace";
+import { ensurePersonalWorkspace, resolveActiveWorkspaceId } from "@/server/data/workspace";
 
 // Only register a provider when its credentials exist, so the app runs before
 // any OAuth app is configured. Auth.js v5 auto-reads AUTH_<PROVIDER>_ID/SECRET.
@@ -29,7 +29,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
-        session.user.workspaceId = await getPrimaryWorkspaceId(user.id);
+        session.user.workspaceId = await resolveActiveWorkspaceId(user.id);
       }
       return session;
     },

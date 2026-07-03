@@ -1,7 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { requireSession } from "@/server/context";
-import { getSidebarData } from "@/server/data/workspace";
+import { getSidebarData, getMyWorkspaces } from "@/server/data/workspace";
 import { listPromptSummaries } from "@/server/data/prompts";
 
 const PLAN_LABEL: Record<string, string> = {
@@ -13,8 +13,11 @@ const PLAN_LABEL: Record<string, string> = {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
   const workspaceId = session.user.workspaceId;
-  const stats = workspaceId ? await getSidebarData(workspaceId, session.user.id) : undefined;
-  const prompts = workspaceId ? await listPromptSummaries(workspaceId) : [];
+  const [stats, prompts, workspaces] = await Promise.all([
+    workspaceId ? getSidebarData(workspaceId, session.user.id) : Promise.resolve(undefined),
+    workspaceId ? listPromptSummaries(workspaceId) : Promise.resolve([]),
+    getMyWorkspaces(session.user.id),
+  ]);
 
   const user = {
     name: session.user.name ?? session.user.email ?? "You",
@@ -24,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-full lg:flex">
-      <Sidebar user={user} stats={stats} />
+      <Sidebar user={user} stats={stats} workspaces={workspaces} currentWorkspaceId={workspaceId} />
       <main className="min-w-0 flex-1">{children}</main>
       <CommandPalette prompts={prompts} />
     </div>

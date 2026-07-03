@@ -56,6 +56,113 @@ export async function getPrimaryWorkspaceId(userId: string) {
   return membership?.workspaceId ?? null;
 }
 
+/**
+ * The workspace the user is currently acting in. Honors User.activeWorkspaceId
+ * when it still points at a workspace they belong to; otherwise falls back to
+ * their oldest membership (their personal workspace). Never returns a workspace
+ * the caller isn't a member of.
+ */
+export async function resolveActiveWorkspaceId(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { activeWorkspaceId: true },
+  });
+  if (user?.activeWorkspaceId) {
+    const member = await prisma.membership.findUnique({
+      where: { workspaceId_userId: { workspaceId: user.activeWorkspaceId, userId } },
+      select: { workspaceId: true },
+    });
+    if (member) return member.workspaceId;
+  }
+  return getPrimaryWorkspaceId(userId);
+}
+
+export type MyWorkspace = {
+  id: string;
+  name: string;
+  type: "PERSONAL" | "TEAM";
+  role: "OWNER" | "ADMIN" | "MEMBER";
+  memberCount: number;
+};
+
+/** Every workspace the user belongs to, oldest first (personal is usually first). */
+export async function getMyWorkspaces(userId: string): Promise<MyWorkspace[]> {
+  const memberships = await prisma.membership.findMany({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    select: {
+      role: true,
+      workspace: {
+        select: { id: true, name: true, type: true, _count: { select: { members: true } } },
+      },
+    },
+  });
+  return memberships.map((m) => ({
+    id: m.workspace.id,
+    name: m.workspace.name,
+    type: m.workspace.type,
+    role: m.role,
+    memberCount: m.workspace._count.members,
+  }));
+}
+
+export type WorkspaceMember = {
+  userId: string;
+  name: string;
+  email: string | null;
+  image: string | null;
+  role: "OWNER" | "ADMIN" | "MEMBER";
+  joinedAt: Date;
+};
+
+/** Members of a workspace, owners first. */
+export async function getMembers(workspaceId: string): Promise<WorkspaceMember[]> {
+  const members = await prisma.membership.findMany({
+    where: { workspaceId },
+    orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+    select: {
+      role: true,
+      createdAt: true,
+      user: { select: { id: true, name: true, email: true, image: true } },
+    },
+  });
+  return members.map((m) => ({
+    userId: m.user.id,
+    name: m.user.name ?? m.user.email ?? "Member",
+    email: m.user.email,
+    image: m.user.image,
+    role: m.role,
+    joinedAt: m.createdAt,
+  }));
+}
+
+/** Name/type/plan/role for the current workspace, plus its invite token. */
+export async function getWorkspaceMeta(workspaceId: string, userId: string) {
+  const [ws, membership] = await Promise.all([
+    prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { id: true, name: true, type: true, plan: true, inviteToken: true },
+    }),
+    prisma.membership.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId } },
+      select: { role: true },
+    }),
+  ]);
+  if (!ws) return null;
+  return { ...ws, myRole: membership?.role ?? null };
+}
+
+/** Resolve an invite link to its (public-safe) workspace summary, or null. */
+export async function getWorkspaceByInviteToken(token: string) {
+  const ws = await prisma.workspace.findUnique({
+    where: { inviteToken: token },
+    select: { id: true, name: true, type: true, _count: { select: { members: true } } },
+  });
+  return ws
+    ? { id: ws.id, name: ws.name, type: ws.type, memberCount: ws._count.members }
+    : null;
+}
+
 /** The workspace's plan tier (defaults to FREE). */
 export async function getWorkspacePlan(workspaceId: string) {
   const ws = await prisma.workspace.findUnique({

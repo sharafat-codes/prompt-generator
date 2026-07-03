@@ -47,6 +47,27 @@ export default async function SettingsPage() {
           </p>
         </Card>
       )}
+
+      {user && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Link href="/settings/team">
+            <Card className="p-5 transition-colors hover:border-ink-3">
+              <div className="text-sm font-semibold">Team</div>
+              <p className="mt-1 text-[13px] text-ink-3">
+                Create a shared workspace, invite teammates, and switch workspaces.
+              </p>
+            </Card>
+          </Link>
+          <Link href="/settings/usage">
+            <Card className="p-5 transition-colors hover:border-ink-3">
+              <div className="text-sm font-semibold">Plan &amp; usage</div>
+              <p className="mt-1 text-[13px] text-ink-3">
+                See this month&apos;s generations and upgrade your plan.
+              </p>
+            </Card>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

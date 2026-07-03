@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { LayoutGrid, Plus, Star, Search, Menu, X, BarChart3 } from "lucide-react";
 import { Mark } from "./mark";
 import { UsageMeter } from "./usage-meter";
+import { WorkspaceSwitcher } from "./workspace-switcher";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -17,10 +18,27 @@ type SidebarStats = {
   generationsUsed: number;
   generationsLimit: number;
 };
+type SidebarWorkspace = {
+  id: string;
+  name: string;
+  type: "PERSONAL" | "TEAM";
+  role: "OWNER" | "ADMIN" | "MEMBER";
+  memberCount: number;
+};
 
 const openPalette = () => window.dispatchEvent(new Event("openCommandPalette"));
 
-export function Sidebar({ user, stats }: { user?: SidebarUser; stats?: SidebarStats }) {
+export function Sidebar({
+  user,
+  stats,
+  workspaces = [],
+  currentWorkspaceId = null,
+}: {
+  user?: SidebarUser;
+  stats?: SidebarStats;
+  workspaces?: SidebarWorkspace[];
+  currentWorkspaceId?: string | null;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -82,6 +100,8 @@ export function Sidebar({ user, stats }: { user?: SidebarUser; stats?: SidebarSt
           <Mark size={26} />
           <span className="text-[15px] font-semibold tracking-[-0.01em]">PromptPilot</span>
         </Link>
+
+        <WorkspaceSwitcher workspaces={workspaces} currentId={currentWorkspaceId} />
 
         <Link href="/create" className="mb-2 block">
           <Button className="w-full">
